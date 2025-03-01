@@ -1,74 +1,76 @@
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <Adafruit_LiquidCrystal.h>
 
-// Inicializa o display LCD (endereço I2C, colunas, linhas)
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-// Pinos de entrada
-const int validateButtonPin = 2;  // Botão para validar entrada de passageiros
-const int stationButtonPin = 3;   // Botão para simular chegada/partida do metrô
+Adafruit_LiquidCrystal lcd_1(7); // Configuração do LCD
 
 // Variáveis de estado
-int currentCount = 0;             // Contagem de passageiros do dia atual
-int lastDayCount = 0;             // Contagem de passageiros do dia anterior
-int dayBeforeLastCount = 0;       // Contagem de passageiros de dois dias atrás
-bool isPowered = false;           // Estado da alimentação do sistema
-bool isAtStation = false;         // Indica se o metrô está em uma estação
+int currentCount = 0;
+int lastDayCount = 0;
+int dayBeforeLastCount = 0;
+bool isPowered = false;
+bool isAtStation = false;
+
+// Pinos dos botões
+const int stationButtonPin = A0;   // Chegada/partida
+const int validateButtonPin = A1;  // Validação
+const int resetButtonPin = A2;     // Novo botão de reset
 
 void setup() {
-  // Inicializa o display LCD
-  lcd.begin();
-  lcd.backlight();
-  lcd.print("Metro UFS-FFA");
+  lcd_1.begin(16, 2);
+  lcd_1.print("Metro UFS-FFA");
 
-  // Configura os pinos de entrada
-  pinMode(validateButtonPin, INPUT);
+  // Configura os pinos dos botões como entrada
   pinMode(stationButtonPin, INPUT);
+  pinMode(validateButtonPin, INPUT);
+  pinMode(resetButtonPin, INPUT); // Novo botão
 
-  // Inicializa a comunicação serial
   Serial.begin(9600);
   Serial.println("Sistema Metro UFS-FFA Iniciado");
 }
 
 void loop() {
-  // Verifica se o botão de chegada/partida foi pressionado
+  // Verifica botão de chegada/partida
   if (digitalRead(stationButtonPin) == HIGH) {
-    delay(200);  // Debounce
+    delay(200);
     if (isAtStation) {
-      // Partida da estação
       departFromStation();
     } else {
-      // Chegada na estação
       arriveAtStation();
     }
-    isAtStation = !isAtStation;  // Alterna o estado da estação
-    delay(500);  // Evita múltiplas leituras
+    isAtStation = !isAtStation;
+    delay(500);
   }
 
-  // Verifica se o botão de validação foi pressionado
+  // Verifica botão de validação
   if (digitalRead(validateButtonPin) == HIGH && isPowered) {
-    delay(200);  // Debounce
+    delay(200);
     validateEntry();
-    delay(500);  // Evita múltiplas leituras
+    delay(500);
+  }
+
+  // --- NOVO: Verifica botão de reset ---
+  if (digitalRead(resetButtonPin) == HIGH) {
+    delay(200); // Debounce
+    resetSystem();
+    delay(500); // Evita múltiplos resets
   }
 }
 
 void arriveAtStation() {
   // Simula a chegada do metrô em uma estação
   isPowered = true;  // Liga a alimentação
-  lcd.clear();
-  lcd.print("Chegada Estacao");
+  lcd_1.clear();
+  lcd_1.print("Chegada Estacao");
   Serial.println("Chegada na Estacao");
 }
 
 void departFromStation() {
   // Simula a partida do metrô de uma estação
   isPowered = false;  // Desliga a alimentação
-  lcd.clear();
-  lcd.print("Partida Estacao");
-  lcd.setCursor(0, 1);
-  lcd.print("Passageiros: ");
-  lcd.print(currentCount);
+  lcd_1.clear();
+  lcd_1.print("Partida Estacao");
+  lcd_1.setCursor(0, 1);
+  lcd_1.print("Passageiros: ");
+  lcd_1.print(currentCount);
   Serial.print("Partida da Estacao - Passageiros: ");
   Serial.println(currentCount);
 }
@@ -76,9 +78,9 @@ void departFromStation() {
 void validateEntry() {
   // Simula a validação de entrada de um passageiro
   currentCount++;
-  lcd.clear();
-  lcd.print("Passageiros: ");
-  lcd.print(currentCount);
+  lcd_1.clear();
+  lcd_1.print("Passageiros: ");
+  lcd_1.print(currentCount);
   Serial.print("Passageiro validado. Total: ");
   Serial.println(currentCount);
 }
@@ -89,11 +91,11 @@ void resetSystem() {
   lastDayCount = currentCount;
   currentCount = 0;
 
-  // Exibe a diferença entre os dois últimos dias
+  // Calcula a diferença entre os dois últimos dias
   int difference = lastDayCount - dayBeforeLastCount;
-  lcd.clear();
-  lcd.print("Diferenca: ");
-  lcd.print(difference);
+  lcd_1.clear();
+  lcd_1.print("Diferenca: ");
+  lcd_1.print(difference);
   Serial.print("Sistema Resetado. Diferenca: ");
   Serial.println(difference);
 }
